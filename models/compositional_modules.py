@@ -2,6 +2,7 @@ import os
 
 from models.coop import coop
 from models.csp import get_csp, get_mix_csp
+from models.clip_adapters import get_clip_adapters
 
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 
@@ -12,6 +13,9 @@ def get_model(train_dataset, config, device):
 
     elif config.experiment_name == "csp":
         return get_csp(train_dataset, config, device)
+
+    elif config.experiment_name == "clip_adapter":
+        return get_clip_adapters(train_dataset, config, device)
 
     # special experimental setup
     elif config.experiment_name == "mix_csp":

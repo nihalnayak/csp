@@ -32,7 +32,7 @@ class Adapter(nn.Module):
         else:
             return self.visual_adapter(representation)
 
-def clip_adapters(
+def get_clip_adapters(
         train_dataset,
         config,
         device,
@@ -100,6 +100,7 @@ def clip_adapters(
         enable_pos_emb=True
     )
 
+
     return model, optimizer
 
 class CLIPAdapters(CLIPInterface):
@@ -126,6 +127,35 @@ class CLIPAdapters(CLIPInterface):
         self.token_ids = token_ids
         self.adapter = adapter
         self.offset = offset
+
+    def construct_token_tensors(self, pair_idx):
+        """Function creates the token tensor for further inference.
+
+        Args:
+            pair_idx (torch.Tensor): Shape [N x 2], where N is the number
+                of pairs of attr and obj
+
+        Returns:
+            torch.Tensor: token tensor passed to the text encoder;
+                shape [N x context_length x 512]
+        """
+        attr_idx, obj_idx = pair_idx[:, 0], pair_idx[:, 1]
+        class_token_ids = self.token_ids.repeat(len(pair_idx), 1)
+        token_tensor = self.clip_model.token_embedding(
+            class_token_ids.to(self.device)
+        ).type(self.clip_model.dtype)
+
+        eos_idx = int(self.token_ids[0].argmax())
+        soft_embeddings = self.attr_dropout(self.soft_embeddings)
+        token_tensor[:, eos_idx - 2, :] = soft_embeddings[
+            attr_idx
+        ].type(self.clip_model.dtype)
+        token_tensor[:, eos_idx - 1, :] = soft_embeddings[
+            obj_idx + self.offset
+        ].type(self.clip_model.dtype)
+
+        return token_tensor
+
 
     # overriding the class method
     def encode_image(self, imgs):

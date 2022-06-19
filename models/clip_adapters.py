@@ -81,6 +81,7 @@ def get_clip_adapters(
     # 0.6 is based on their observation that
     # it works well for fine-grained datasets.
     adapter = Adapter(embed_dim, alpha=0.6)
+    adapter.to(device)
 
     optimizer = torch.optim.Adam(
         adapter.parameters(),

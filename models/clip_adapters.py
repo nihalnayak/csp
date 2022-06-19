@@ -130,6 +130,7 @@ class CLIPAdapters(CLIPInterface):
         self.adapter = adapter
         self.offset = offset
 
+
     def construct_token_tensors(self, pair_idx):
         """Function creates the token tensor for further inference.
 
@@ -148,7 +149,8 @@ class CLIPAdapters(CLIPInterface):
         ).type(self.clip_model.dtype)
 
         eos_idx = int(self.token_ids[0].argmax())
-        soft_embeddings = self.attr_dropout(self.soft_embeddings)
+        # soft_embeddings = self.attr_dropout(self.soft_embeddings)
+        soft_embeddings = self.soft_embeddings
         token_tensor[:, eos_idx - 2, :] = soft_embeddings[
             attr_idx
         ].type(self.clip_model.dtype)

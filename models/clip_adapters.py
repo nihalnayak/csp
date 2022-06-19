@@ -87,7 +87,8 @@ def get_clip_adapters(
     optimizer = torch.optim.Adam(
         adapter.parameters(),
         lr=config.lr,
-        weight_decay=config.weight_decay
+        weight_decay=config.weight_decay,
+        eps=1e-4
     )
 
     # only using the visual adapter

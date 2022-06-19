@@ -123,6 +123,25 @@ def save_soft_embeddings(model, config, epoch=None):
                 )
             torch.save(model.adapter.state_dict(), adapter_path)
 
+
+        elif config.experiment_name == "clip_adapter_csp":
+            if epoch:
+                adapter_path = os.path.join(
+                    config.save_path, f"adapter_epoch_{epoch}.pt"
+                )
+                soft_emb_path = os.path.join(
+                    config.save_path, f"soft_embeddings_epoch_{epoch}.pt"
+                )
+            else:
+                adapter_path = os.path.join(
+                    config.save_path, f"adapter.pt"
+                )
+                soft_emb_path = os.path.join(
+                    config.save_path, "soft_embeddings.pt"
+                )
+            torch.save(model.adapter.state_dict(), adapter_path)
+            torch.save({"soft_embeddings": model.soft_embeddings}, soft_emb_path)
+
         else:
             if epoch:
                 soft_emb_path = os.path.join(

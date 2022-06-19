@@ -160,5 +160,5 @@ class CLIPAdapters(CLIPInterface):
     # overriding the class method
     def encode_image(self, imgs):
         # return self.clip_model.encode_image(imgs)
-        features = self.clip.encode_image(imgs)
+        features = self.clip_model.encode_image(imgs)
         return self.adapter.alpha * self.adapter(features) - (1-self.adapter.alpha) * features

@@ -68,8 +68,10 @@ def get_clip_adapters(
             frozen_embedding[idx, :] = torch.mean(rep[1:eos_idx, :], axis=0)
 
     # TODO: clip adapters with csp
-
-    attr_obj_embs = frozen_embedding
+    if config.experiment_name == "clip_adapter_csp":
+        attr_obj_embs = nn.Parameter(frozen_embedding)
+    else:
+        attr_obj_embs = frozen_embedding
 
     embed_dim = orig_token_embedding.size(-1)
     offset = len(attributes)
@@ -84,8 +86,12 @@ def get_clip_adapters(
     adapter = Adapter(embed_dim, alpha=0.6)
     adapter.to(device)
 
+    params = list(adapter.parameters())
+    if config.experiment_name == "clip_adapter_csp":
+        params += [attr_obj_embs]
+
     optimizer = torch.optim.Adam(
-        adapter.parameters(),
+        params,
         lr=config.lr,
         weight_decay=config.weight_decay,
         eps=1e-4

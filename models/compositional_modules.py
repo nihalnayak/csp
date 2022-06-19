@@ -14,7 +14,8 @@ def get_model(train_dataset, config, device):
     elif config.experiment_name == "csp":
         return get_csp(train_dataset, config, device)
 
-    elif config.experiment_name == "clip_adapter":
+    elif config.experiment_name == "clip_adapter" or \
+        config.experiment_name == "clip_adapter_csp":
         return get_clip_adapters(train_dataset, config, device)
 
     # special experimental setup

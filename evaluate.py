@@ -661,7 +661,12 @@ if __name__ == "__main__":
         type=str,
         default="./soft_embeddings.pt",
     )
-
+    parser.add_argument(
+        "--adapter_path",
+        help="location for adapter checkpoint",
+        type=str,
+        default="./adapter.pt",
+    )
     parser.add_argument(
         "--text_encoder_batch_size",
         help="batch size of the text encoder",
@@ -721,6 +726,20 @@ if __name__ == "__main__":
             enable_pos_emb=True)
         val_text_rep = clip_baseline(model, val_dataset, config, device)
         test_text_rep = clip_baseline(model, test_dataset, config, device)
+
+    elif config.experiment_name == 'clip_adapter':
+        model, optimizer = get_model(val_dataset, config, device)
+
+        model.adapter.load_state_dict(
+            torch.load(config.adapter_path)
+        )
+
+        # soft_embs = torch.load(config.soft_embeddings)['soft_embeddings']
+        # model.set_soft_embeddings(soft_embs)
+        val_text_rep = compute_representations(
+            model, val_dataset, config, device)
+        test_text_rep = compute_representations(
+            model, test_dataset, config, device)
     else:
         model, optimizer = get_model(val_dataset, config, device)
 

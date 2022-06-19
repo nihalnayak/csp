@@ -4,6 +4,7 @@ import os
 from turtle import forward
 
 import clip
+from numpy import dtype
 import torch
 import torch.nn as nn
 from clip_modules.interface import CLIPInterface
@@ -12,12 +13,12 @@ from clip_modules.model_loader import load
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 
 class Adapter(nn.Module):
-    def __init__(self, embed_dim, alpha):
+    def __init__(self, embed_dim, alpha, dtype=torch.float16):
         super().__init__()
         self.visual_adapter = nn.Sequential(
-            nn.Linear(embed_dim, embed_dim),
+            nn.Linear(embed_dim, embed_dim, dtype=dtype),
             nn.ReLU(),
-            nn.Linear(embed_dim, embed_dim),
+            nn.Linear(embed_dim, embed_dim, dtype=dtype),
         )
         self.text_adapter = nn.Sequential(
             nn.Linear(embed_dim, embed_dim),

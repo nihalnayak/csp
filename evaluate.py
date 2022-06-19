@@ -695,7 +695,8 @@ if __name__ == "__main__":
     print(f"experiment name: {config.experiment_name}")
 
     if config.experiment_name != 'clip':
-        if not os.path.exists(config.soft_embeddings):
+        if not os.path.exists(config.soft_embeddings) and \
+            not os.path.exists(config.adapter_path):
             print(f'{config.soft_embeddings} not found')
             print('code exiting!')
             exit(0)

@@ -728,15 +728,16 @@ if __name__ == "__main__":
         val_text_rep = clip_baseline(model, val_dataset, config, device)
         test_text_rep = clip_baseline(model, test_dataset, config, device)
 
-    elif config.experiment_name == 'clip_adapter':
+    elif config.experiment_name == 'clip_adapter' or \
+        config.experiment_name == 'clip_adapter_csp':
         model, optimizer = get_model(val_dataset, config, device)
 
         model.adapter.load_state_dict(
             torch.load(config.adapter_path)
         )
-
-        # soft_embs = torch.load(config.soft_embeddings)['soft_embeddings']
-        # model.set_soft_embeddings(soft_embs)
+        if config.experiment_name == 'clip_adapter_csp':
+            soft_embs = torch.load(config.soft_embeddings)['soft_embeddings']
+            model.set_soft_embeddings(soft_embs)
         val_text_rep = compute_representations(
             model, val_dataset, config, device)
         test_text_rep = compute_representations(

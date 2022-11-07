@@ -52,12 +52,22 @@ class CSPInterface(CLIPInterface):
 
         eos_idx = int(self.token_ids[0].argmax())
         soft_embeddings = self.attr_dropout(self.soft_embeddings)
-        token_tensor[:, eos_idx - 2, :] = soft_embeddings[
-            attr_idx
-        ].type(self.clip_model.dtype)
-        token_tensor[:, eos_idx - 1, :] = soft_embeddings[
-            obj_idx + self.offset
-        ].type(self.clip_model.dtype)
+
+        if self.config.experiment_name == "csp_att":
+            token_tensor[:, eos_idx - 2, :] = soft_embeddings[
+                attr_idx
+            ].type(self.clip_model.dtype)
+        elif self.config.experiment_name == "csp_obj":
+            token_tensor[:, eos_idx - 1, :] = soft_embeddings[
+                obj_idx + self.offset
+            ].type(self.clip_model.dtype)
+        else:
+            token_tensor[:, eos_idx - 2, :] = soft_embeddings[
+                attr_idx
+            ].type(self.clip_model.dtype)
+            token_tensor[:, eos_idx - 1, :] = soft_embeddings[
+                obj_idx + self.offset
+            ].type(self.clip_model.dtype)
 
         return token_tensor
 

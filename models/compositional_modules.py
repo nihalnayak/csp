@@ -11,7 +11,9 @@ def get_model(train_dataset, config, device):
     if config.experiment_name == "coop":
         return coop(train_dataset, config, device)
 
-    elif config.experiment_name == "csp":
+    elif config.experiment_name == "csp" or \
+        config.experiment_name == "csp_obj" or \
+        config.experiment_name == "csp_att":
         return get_csp(train_dataset, config, device)
 
     elif config.experiment_name == "clip_adapter" or \

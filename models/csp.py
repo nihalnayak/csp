@@ -52,6 +52,7 @@ class CSPInterface(CLIPInterface):
 
         eos_idx = int(self.token_ids[0].argmax())
         soft_embeddings = self.attr_dropout(self.soft_embeddings)
+        soft_embeddings = soft_embeddings.to(self.device)
 
         if self.config.experiment_name == "csp_att":
             token_tensor[:, eos_idx - 2, :] = soft_embeddings[

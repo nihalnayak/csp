@@ -1,4 +1,5 @@
 import os
+import copy
 
 import clip
 import pandas as pd
@@ -153,7 +154,7 @@ def get_csp(train_dataset, config, device):
     with torch.no_grad():
         subset_soft_embeddings = None
         if config.experiment_name == "csp_att":
-            subset_soft_embeddings = soft_embedding[:offset, :]
+            subset_soft_embeddings = copy.deepcopy(soft_embedding[:offset, :])
             soft_embedding.requires_grad = False
             subset_soft_embeddings.requires_grad = True
             optimizer = torch.optim.Adam(
@@ -162,7 +163,7 @@ def get_csp(train_dataset, config, device):
                 weight_decay=config.weight_decay,
             )
         elif config.experiment_name == "csp_obj":
-            subset_soft_embeddings = soft_embedding[offset:, :]
+            subset_soft_embeddings = copy.deepcopy(soft_embedding[offset:, :])
             soft_embedding.requires_grad = False
             subset_soft_embeddings.requires_grad = True
             optimizer = torch.optim.Adam(

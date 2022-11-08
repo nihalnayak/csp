@@ -64,10 +64,12 @@ class CSPInterface(CLIPInterface):
         ].type(self.clip_model.dtype)
 
         if self.config.experiment_name == "csp_att":
+            self.subset_soft_embeddings = self.subset_soft_embeddings.to(self.device)
             token_tensor[:, eos_idx - 2, :] = self.attr_dropout(self.subset_soft_embeddings[
                 attr_idx
             ]).type(self.clip_model.dtype)
         elif self.config.experiment_name == "csp_obj":
+            self.subset_soft_embeddings = self.subset_soft_embeddings.to(self.device)
             token_tensor[:, eos_idx - 1, :] = self.attr_dropout(self.subset_soft_embeddings[
                 obj_idx
             ]).type(self.clip_model.dtype)

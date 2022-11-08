@@ -135,27 +135,31 @@ def get_csp(train_dataset, config, device):
         offset
     ) = csp_init(train_dataset, config, device)
 
-    subset_soft_embeddings = None
-    if config.experiment_name == "csp_att":
-        subset_soft_embeddings = soft_embedding[:offset, :]
-        optimizer = torch.optim.Adam(
-            [subset_soft_embeddings],
-            lr=config.lr,
-            weight_decay=config.weight_decay,
-        )
-    elif config.experiment_name == "csp_obj":
-        subset_soft_embeddings = soft_embedding[offset:, :]
-        optimizer = torch.optim.Adam(
-            [subset_soft_embeddings],
-            lr=config.lr,
-            weight_decay=config.weight_decay,
-        )
-    else:
-        optimizer = torch.optim.Adam(
-            [soft_embedding],
-            lr=config.lr,
-            weight_decay=config.weight_decay,
-        )
+    with torch.no_grad:
+        subset_soft_embeddings = None
+        if config.experiment_name == "csp_att":
+            subset_soft_embeddings = soft_embedding[:offset, :]
+            subset_soft_embeddings.requires_grad = True
+            optimizer = torch.optim.Adam(
+                [subset_soft_embeddings],
+                lr=config.lr,
+                weight_decay=config.weight_decay,
+            )
+        elif config.experiment_name == "csp_obj":
+            subset_soft_embeddings = soft_embedding[offset:, :]
+            subset_soft_embeddings.requires_grad = True
+            optimizer = torch.optim.Adam(
+                [subset_soft_embeddings],
+                lr=config.lr,
+                weight_decay=config.weight_decay,
+            )
+        else:
+            soft_embedding.requires_grad = True
+            optimizer = torch.optim.Adam(
+                [soft_embedding],
+                lr=config.lr,
+                weight_decay=config.weight_decay,
+            )
 
     interface = CSPInterface(
         clip_model,

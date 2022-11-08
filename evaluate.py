@@ -662,6 +662,12 @@ if __name__ == "__main__":
         default="./soft_embeddings.pt",
     )
     parser.add_argument(
+        "--subset_soft_embeddings",
+        help="location for softembeddings",
+        type=str,
+        default="./subset_soft_embeddings.pt",
+    )
+    parser.add_argument(
         "--adapter_path",
         help="location for adapter checkpoint",
         type=str,
@@ -742,6 +748,9 @@ if __name__ == "__main__":
             model, val_dataset, config, device)
         test_text_rep = compute_representations(
             model, test_dataset, config, device)
+    elif config.experiment_name == "csp_att" or config.experiment_name == "csp_obj":
+        soft_embs = torch.load(config.soft_embeddings)['soft_embeddings']
+        subset_soft_embs = torch.load(config.subset_embeddings)["subset_soft_embeddings"]
     else:
         model, optimizer = get_model(val_dataset, config, device)
 

@@ -20,6 +20,7 @@ class CSPInterface(CLIPInterface):
         device="cuda:0",
         enable_pos_emb=True,
         attr_dropout=0.0,
+        subset_soft_embeddings=None
     ):
         super().__init__(
             clip_model,
@@ -32,6 +33,7 @@ class CSPInterface(CLIPInterface):
 
         self.offset = offset
         self.attr_dropout = nn.Dropout(attr_dropout)
+        self.subset_soft_embeddings = subset_soft_embeddings
 
     def construct_token_tensors(self, pair_idx):
         """Function creates the token tensor for further inference.
@@ -54,21 +56,22 @@ class CSPInterface(CLIPInterface):
         soft_embeddings = self.attr_dropout(self.soft_embeddings)
         soft_embeddings = soft_embeddings.to(self.device)
 
+        token_tensor[:, eos_idx - 2, :] = soft_embeddings[
+            attr_idx
+        ].type(self.clip_model.dtype)
+        token_tensor[:, eos_idx - 1, :] = soft_embeddings[
+            obj_idx + self.offset
+        ].type(self.clip_model.dtype)
+
         if self.config.experiment_name == "csp_att":
-            token_tensor[:, eos_idx - 2, :] = soft_embeddings[
+            token_tensor[:, eos_idx - 2, :] = self.attr_dropout(self.subset_soft_embeddings[
                 attr_idx
-            ].type(self.clip_model.dtype)
+            ]).type(self.clip_model.dtype)
         elif self.config.experiment_name == "csp_obj":
-            token_tensor[:, eos_idx - 1, :] = soft_embeddings[
-                obj_idx + self.offset
-            ].type(self.clip_model.dtype)
-        else:
-            token_tensor[:, eos_idx - 2, :] = soft_embeddings[
-                attr_idx
-            ].type(self.clip_model.dtype)
-            token_tensor[:, eos_idx - 1, :] = soft_embeddings[
-                obj_idx + self.offset
-            ].type(self.clip_model.dtype)
+            token_tensor[:, eos_idx - 1, :] = self.attr_dropout(self.subset_soft_embeddings[
+                obj_idx
+            ]).type(self.clip_model.dtype)
+
 
         return token_tensor
 
@@ -123,7 +126,6 @@ def csp_init(
     )
 
 
-
 def get_csp(train_dataset, config, device):
 
     (
@@ -133,11 +135,27 @@ def get_csp(train_dataset, config, device):
         offset
     ) = csp_init(train_dataset, config, device)
 
-    optimizer = torch.optim.Adam(
-        [soft_embedding],
-        lr=config.lr,
-        weight_decay=config.weight_decay,
-    )
+    subset_soft_embeddings = None
+    if config.experiment_name == "csp_att":
+        subset_soft_embeddings = soft_embedding[:offset, :]
+        optimizer = torch.optim.Adam(
+            [subset_soft_embeddings],
+            lr=config.lr,
+            weight_decay=config.weight_decay,
+        )
+    elif config.experiment_name == "csp_obj":
+        subset_soft_embeddings = soft_embedding[offset:, :]
+        optimizer = torch.optim.Adam(
+            [subset_soft_embeddings],
+            lr=config.lr,
+            weight_decay=config.weight_decay,
+        )
+    else:
+        optimizer = torch.optim.Adam(
+            [soft_embedding],
+            lr=config.lr,
+            weight_decay=config.weight_decay,
+        )
 
     interface = CSPInterface(
         clip_model,

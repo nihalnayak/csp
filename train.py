@@ -144,13 +144,22 @@ def save_soft_embeddings(model, config, epoch=None):
 
         else:
             if epoch:
+                subset_soft_emb_path = os.path.join(
+                    config.save_path, f"subset_soft_embeddings_epoch_{epoch}.pt"
+                )
                 soft_emb_path = os.path.join(
                     config.save_path, f"soft_embeddings_epoch_{epoch}.pt"
                 )
             else:
+                subset_soft_emb_path = os.path.join(
+                    config.save_path, "subset_soft_embeddings.pt"
+                )
                 soft_emb_path = os.path.join(
                     config.save_path, "soft_embeddings.pt"
                 )
+
+            if config.experiment_name == "csp_att" or config.experiment_name == "csp_obj":
+                torch.save({"subset_soft_embeddings": model.subset_soft_embeddings}, subset_soft_emb_path)
 
             torch.save({"soft_embeddings": model.soft_embeddings}, soft_emb_path)
 

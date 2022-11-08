@@ -135,7 +135,7 @@ def get_csp(train_dataset, config, device):
         offset
     ) = csp_init(train_dataset, config, device)
 
-    with torch.no_grad:
+    with torch.no_grad():
         subset_soft_embeddings = None
         if config.experiment_name == "csp_att":
             subset_soft_embeddings = soft_embedding[:offset, :]

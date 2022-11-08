@@ -164,7 +164,8 @@ def get_csp(train_dataset, config, device):
         soft_embedding,
         class_token_ids,
         device,
-        attr_dropout=config.attr_dropout
+        attr_dropout=config.attr_dropout,
+        subset_soft_embeddings=subset_soft_embeddings
     )
 
     return interface, optimizer

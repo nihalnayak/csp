@@ -55,7 +55,9 @@ class CustomVisualEncoder(nn.Module):
         x = torch.cat(
             [
                 x[:1, :, :],
-                self.visual_prompt.expand(batch_size, -1, -1).permute(1, 0, 2),
+                self.visual_prompt.expand(batch_size, -1, -1)
+                .permute(1, 0, 2)
+                .to(x.device),
                 x[1:, :, :],
             ]
         )

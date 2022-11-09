@@ -65,11 +65,6 @@ class CLIPVisualInterface(torch.nn.Module):
         image_features = self.encode_image(image)
         text_features = self.encode_text(text)
 
-        from IPython import embed
-
-        embed()
-        exit()
-
         # normalized features
         image_features = image_features / image_features.norm(dim=-1, keepdim=True)
         text_features = text_features / text_features.norm(dim=-1, keepdim=True)

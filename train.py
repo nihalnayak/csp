@@ -124,7 +124,7 @@ def save_soft_embeddings(model, config, epoch=None):
             else:
                 visual_prompt_path = os.path.join(config.save_path, f"visual_prompt.pt")
             torch.save(
-                {"visual_prompt": model.custom_visual.visual_prompts},
+                {"visual_prompt": model.custom_visual.visual_prompt},
                 visual_prompt_path,
             )
 

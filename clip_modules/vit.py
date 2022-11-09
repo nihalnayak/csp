@@ -56,6 +56,7 @@ class CustomVisualEncoder(nn.Module):
             [
                 x[:1, :, :],
                 self.visual_prompt.expand(batch_size, -1, -1)
+                .type(x.dtype)
                 .permute(1, 0, 2)
                 .to(x.device),
                 x[1:, :, :],

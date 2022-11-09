@@ -128,7 +128,7 @@ def save_soft_embeddings(model, config, epoch=None):
                 visual_prompt_path,
             )
 
-        if config.experiment_name == "clip_adapter":
+        elif config.experiment_name == "clip_adapter":
             if epoch:
                 adapter_path = os.path.join(
                     config.save_path, f"adapter_epoch_{epoch}.pt"

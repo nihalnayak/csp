@@ -673,7 +673,7 @@ if __name__ == "__main__":
     print(f"dataset: {config.dataset}")
     print(f"experiment name: {config.experiment_name}")
 
-    if config.experiment_name != "clip" or config.experiment_name != "visual_prompt":
+    if config.experiment_name != "clip" and config.experiment_name != "visual_prompt":
         if not os.path.exists(config.soft_embeddings) and not os.path.exists(
             config.adapter_path
         ):

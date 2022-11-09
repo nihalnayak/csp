@@ -646,6 +646,11 @@ if __name__ == "__main__":
         default="./adapter.pt",
     )
     parser.add_argument(
+        "--visual_prompt_path",
+        help="location for visual prompt embedding",
+        type=str,
+    )
+    parser.add_argument(
         "--text_encoder_batch_size",
         help="batch size of the text encoder",
         default=16,
@@ -668,7 +673,7 @@ if __name__ == "__main__":
     print(f"dataset: {config.dataset}")
     print(f"experiment name: {config.experiment_name}")
 
-    if config.experiment_name != "clip":
+    if config.experiment_name != "clip" or config.experiment_name != "visual_prompt":
         if not os.path.exists(config.soft_embeddings) and not os.path.exists(
             config.adapter_path
         ):

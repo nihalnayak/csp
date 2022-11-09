@@ -116,6 +116,18 @@ def save_soft_embeddings(model, config, epoch=None):
 
     # save the soft embedding
     with torch.no_grad():
+        if config.experiment_name == "visual_prompt":
+            if epoch:
+                visual_prompt_path = os.path.join(
+                    config.save_path, f"visual_prompt_epoch_{epoch}.pt"
+                )
+            else:
+                visual_prompt_path = os.path.join(config.save_path, f"visual_prompt.pt")
+            torch.save(
+                {"visual_prompt": model.custom_visual.visual_prompts},
+                visual_prompt_path,
+            )
+
         if config.experiment_name == "clip_adapter":
             if epoch:
                 adapter_path = os.path.join(
@@ -222,7 +234,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--gradient_accumulation_steps",
         help="number of gradient accumulation steps",
-        default=1,
+        default=4,
         type=int,
     )
     parser.add_argument(

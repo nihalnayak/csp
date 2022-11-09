@@ -646,6 +646,9 @@ if __name__ == "__main__":
         default="./adapter.pt",
     )
     parser.add_argument(
+        "--num_prompt_tokens", help="num prompt tokens", type=int, default=4
+    )
+    parser.add_argument(
         "--visual_prompt_path",
         help="location for visual prompt embedding",
         type=str,

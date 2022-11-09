@@ -4,6 +4,7 @@ import os
 import pickle
 import pprint
 
+import clip
 import numpy as np
 import torch
 import tqdm
@@ -32,9 +33,7 @@ def train_model(model, optimizer, train_dataset, config, device):
         tuple: the trained model (or the best model) and the optimizer
     """
     train_dataloader = DataLoader(
-        train_dataset,
-        batch_size=config.train_batch_size,
-        shuffle=True
+        train_dataset, batch_size=config.train_batch_size, shuffle=True
     )
 
     model.train()
@@ -44,8 +43,13 @@ def train_model(model, optimizer, train_dataset, config, device):
     attr2idx = train_dataset.attr2idx
     obj2idx = train_dataset.obj2idx
 
-    train_pairs = torch.tensor([(attr2idx[attr], obj2idx[obj])
-                                for attr, obj in train_dataset.train_pairs]).to(device)
+    train_pairs = torch.tensor(
+        [(attr2idx[attr], obj2idx[obj]) for attr, obj in train_dataset.train_pairs]
+    ).to(device)
+    text_prompts = [
+        clip.tokenize(f"a photo of {attr} {obj}", context_length=config.context_length)
+        for attr, obj in train_dataset.train_pairs
+    ]
     i = 0
     train_losses = []
 
@@ -61,9 +65,12 @@ def train_model(model, optimizer, train_dataset, config, device):
             batch_img, batch_target = batch[0], batch[3]
             batch_target = batch_target.to(device)
             batch_img = batch_img.to(device)
-            batch_feat = model.encode_image(batch_img)
 
-            logits = model(batch_feat, train_pairs)
+            if config.experiment_name == "visual_prompt":
+                logits = model(batch_img, text_prompts)
+            else:
+                batch_feat = model.encode_image(batch_img)
+                logits = model(batch_feat, train_pairs)
 
             loss = loss_fn(logits, batch_target)
 
@@ -74,22 +81,19 @@ def train_model(model, optimizer, train_dataset, config, device):
             loss.backward()
 
             # weights update
-            if ((bid + 1) % config.gradient_accumulation_steps == 0) or \
-                    (bid + 1 == len(train_dataloader)):
+            if ((bid + 1) % config.gradient_accumulation_steps == 0) or (
+                bid + 1 == len(train_dataloader)
+            ):
                 optimizer.step()
                 optimizer.zero_grad()
 
             epoch_train_losses.append(loss.item())
-            progress_bar.set_postfix(
-                {"train loss": np.mean(epoch_train_losses[-50:])}
-            )
+            progress_bar.set_postfix({"train loss": np.mean(epoch_train_losses[-50:])})
 
             progress_bar.update()
 
         progress_bar.close()
-        progress_bar.write(
-            f"epoch {i +1} train loss {np.mean(epoch_train_losses)}"
-        )
+        progress_bar.write(f"epoch {i +1} train loss {np.mean(epoch_train_losses)}")
         train_losses.append(np.mean(epoch_train_losses))
 
         if (i + 1) % config.save_every_n == 0:
@@ -118,11 +122,8 @@ def save_soft_embeddings(model, config, epoch=None):
                     config.save_path, f"adapter_epoch_{epoch}.pt"
                 )
             else:
-                adapter_path = os.path.join(
-                    config.save_path, f"adapter.pt"
-                )
+                adapter_path = os.path.join(config.save_path, f"adapter.pt")
             torch.save(model.adapter.state_dict(), adapter_path)
-
 
         elif config.experiment_name == "clip_adapter_csp":
             if epoch:
@@ -133,12 +134,8 @@ def save_soft_embeddings(model, config, epoch=None):
                     config.save_path, f"soft_embeddings_epoch_{epoch}.pt"
                 )
             else:
-                adapter_path = os.path.join(
-                    config.save_path, f"adapter.pt"
-                )
-                soft_emb_path = os.path.join(
-                    config.save_path, "soft_embeddings.pt"
-                )
+                adapter_path = os.path.join(config.save_path, f"adapter.pt")
+                soft_emb_path = os.path.join(config.save_path, "soft_embeddings.pt")
             torch.save(model.adapter.state_dict(), adapter_path)
             torch.save({"soft_embeddings": model.soft_embeddings}, soft_emb_path)
 
@@ -154,12 +151,16 @@ def save_soft_embeddings(model, config, epoch=None):
                 subset_soft_emb_path = os.path.join(
                     config.save_path, "subset_soft_embeddings.pt"
                 )
-                soft_emb_path = os.path.join(
-                    config.save_path, "soft_embeddings.pt"
-                )
+                soft_emb_path = os.path.join(config.save_path, "soft_embeddings.pt")
 
-            if config.experiment_name == "csp_att" or config.experiment_name == "csp_obj":
-                torch.save({"subset_soft_embeddings": model.subset_soft_embeddings}, subset_soft_emb_path)
+            if (
+                config.experiment_name == "csp_att"
+                or config.experiment_name == "csp_obj"
+            ):
+                torch.save(
+                    {"subset_soft_embeddings": model.subset_soft_embeddings},
+                    subset_soft_emb_path,
+                )
 
             torch.save({"soft_embeddings": model.soft_embeddings}, soft_emb_path)
 
@@ -172,18 +173,14 @@ if __name__ == "__main__":
         type=str,
     )
     parser.add_argument("--dataset", help="name of the dataset", type=str)
-    parser.add_argument(
-        "--lr", help="learning rate", type=float, default=5e-05
-    )
+    parser.add_argument("--lr", help="learning rate", type=float, default=5e-05)
     parser.add_argument(
         "--weight_decay", help="weight decay", type=float, default=1e-05
     )
     parser.add_argument(
         "--clip_model", help="clip model type", type=str, default="ViT-B/32"
     )
-    parser.add_argument(
-        "--epochs", help="number of epochs", default=20, type=int
-    )
+    parser.add_argument("--epochs", help="number of epochs", default=20, type=int)
     parser.add_argument(
         "--train_batch_size", help="train batch size", default=64, type=int
     )
@@ -226,7 +223,10 @@ if __name__ == "__main__":
         "--gradient_accumulation_steps",
         help="number of gradient accumulation steps",
         default=1,
-        type=int
+        type=int,
+    )
+    parser.add_argument(
+        "--num_prompt_tokens", help="number of prompt tokens", default=4, type=int
     )
 
     config = parser.parse_args()
@@ -239,20 +239,20 @@ if __name__ == "__main__":
     pprint.pprint(config)
 
     if os.path.exists(config.save_path):
-        print('file already exists')
-        print('exiting!')
+        print("file already exists")
+        print("exiting!")
         exit(0)
 
     # This should work for mit-states, ut-zappos, and maybe c-gqa.
     dataset_path = DATASET_PATHS[config.dataset]
-    train_dataset = CompositionDataset(dataset_path,
-                                       phase='train',
-                                       split='compositional-split-natural')
+    train_dataset = CompositionDataset(
+        dataset_path, phase="train", split="compositional-split-natural"
+    )
 
     model, optimizer = get_model(train_dataset, config, device)
 
     print("model dtype", model.dtype)
-    print("soft embedding dtype", model.soft_embeddings.dtype)
+    # print("soft embedding dtype", model.soft_embeddings.dtype)
 
     if not config.evaluate_only:
         model, optimizer = train_model(
@@ -272,10 +272,6 @@ if __name__ == "__main__":
         pickle.dump(config, fp)
 
     if config.save_model:
-        torch.save(
-            model.dict(),
-            os.path.join(
-                config.save_path,
-                'final_model.pt'))
+        torch.save(model.dict(), os.path.join(config.save_path, "final_model.pt"))
 
     print("done!")

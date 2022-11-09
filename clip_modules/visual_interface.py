@@ -53,7 +53,7 @@ class CLIPVisualInterface(torch.nn.Module):
         )
 
     def encode_image(self, image):
-        return self.custom_visual(image)
+        return self.custom_visual(image.type(self.dtype))
 
     def encode_text(self, text):
         return self.clip_model.encode_text(text)

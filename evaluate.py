@@ -749,11 +749,21 @@ if __name__ == "__main__":
         test_text_rep = compute_representations(
             model, test_dataset, config, device)
     elif config.experiment_name == "csp_att" or config.experiment_name == "csp_obj":
+        # changing the name of experiment
+        exp_name = copy.deepcopy(config.experiment_name)
+        print("changing the name of the experiment to csp")
+        config.experiment_name = "csp"
+        model, optimizer = get_model(val_dataset, config, device)
         soft_embs = torch.load(config.soft_embeddings)['soft_embeddings']
         subset_soft_embs = torch.load(config.subset_embeddings)["subset_soft_embeddings"]
+        with torch.no_grad():
+            if exp_name == "csp_att":
+                soft_embs[:model.offset, :] = subset_soft_embs
+            else:
+                soft_embs[model.offset:, :] = subset_soft_embs
+        model.set_soft_embeddings(soft_embs)
     else:
         model, optimizer = get_model(val_dataset, config, device)
-
         soft_embs = torch.load(config.soft_embeddings)['soft_embeddings']
         model.set_soft_embeddings(soft_embs)
         val_text_rep = compute_representations(

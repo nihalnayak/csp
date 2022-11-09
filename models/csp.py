@@ -137,9 +137,9 @@ def csp_init(
 
 def get_csp(train_dataset, config, device):
 
-    if config.experiment == "csp_att":
+    if config.experiment_name == "csp_att":
         prompt_template = "a photo of X object"
-    elif config.experiment == "csp_obj":
+    elif config.experiment_name == "csp_obj":
         prompt_template = "a photo of X"
     else:
         prompt_template = "a photo of X X"

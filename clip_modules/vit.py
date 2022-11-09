@@ -24,15 +24,13 @@ class CustomVisualEncoder(nn.Module):
 
         self.num_prompt_tokens = num_prompt_tokens
         width = self.positional_embedding.size(1)
-        self.visual_prompts = nn.Parameter(
-            torch.zeros(1, self.num_prompt_tokens, width)
-        )
+        self.visual_prompt = nn.Parameter(torch.zeros(1, self.num_prompt_tokens, width))
 
         patch_size = self.conv1.weight.shape[-1]
         val = math.sqrt(6.0 / float(3 * reduce(mul, [patch_size], 1) + width))  # noqa
         # xavier_uniform initialization
         print(-val, val)
-        nn.init.uniform_(self.visual_prompts.data, -val, val)
+        nn.init.uniform_(self.visual_prompt.data, -val, val)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         batch_size = x.size(0)
@@ -57,7 +55,7 @@ class CustomVisualEncoder(nn.Module):
         x = torch.cat(
             [
                 x[:1, :, :],
-                self.visual_prompts.expand(batch_size, -1, -1).permute(1, 0, 2),
+                self.visual_prompt.expand(batch_size, -1, -1).permute(1, 0, 2),
                 x[1:, :, :],
             ]
         )

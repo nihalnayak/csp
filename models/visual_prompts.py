@@ -12,7 +12,7 @@ def get_visual_prompts(config, device):
     interface = CLIPVisualInterface(clip_model, config, device=device)
 
     optimizer = torch.optim.Adam(
-        [interface.custom_visual.visual_prompts],
+        [interface.custom_visual.visual_prompt],
         lr=config.lr,
         weight_decay=config.weight_decay,
     )

@@ -1,4 +1,3 @@
-
 import argparse
 import copy
 import json
@@ -40,31 +39,30 @@ class Evaluator:
 
         # Convert text pairs to idx tensors: [('sliced', 'apple'), ('ripe',
         # 'apple'), ...] --> torch.LongTensor([[0,1],[1,1], ...])
-        pairs = [(dset.attr2idx[attr], dset.obj2idx[obj])
-                 for attr, obj in dset.pairs]
-        self.train_pairs = [(dset.attr2idx[attr], dset.obj2idx[obj])
-                            for attr, obj in dset.train_pairs]
+        pairs = [(dset.attr2idx[attr], dset.obj2idx[obj]) for attr, obj in dset.pairs]
+        self.train_pairs = [
+            (dset.attr2idx[attr], dset.obj2idx[obj]) for attr, obj in dset.train_pairs
+        ]
         self.pairs = torch.LongTensor(pairs)
 
         # Mask over pairs that occur in closed world
         # Select set based on phase
-        if dset.phase == 'train':
-            print('Evaluating with train pairs')
+        if dset.phase == "train":
+            print("Evaluating with train pairs")
             test_pair_set = set(dset.train_pairs)
             test_pair_gt = set(dset.train_pairs)
-        elif dset.phase == 'val':
-            print('Evaluating with validation pairs')
+        elif dset.phase == "val":
+            print("Evaluating with validation pairs")
             test_pair_set = set(dset.val_pairs + dset.train_pairs)
             test_pair_gt = set(dset.val_pairs)
         else:
-            print('Evaluating with test pairs')
+            print("Evaluating with test pairs")
             test_pair_set = set(dset.test_pairs + dset.train_pairs)
             test_pair_gt = set(dset.test_pairs)
 
         self.test_pair_dict = [
-            (dset.attr2idx[attr],
-             dset.obj2idx[obj]) for attr,
-            obj in test_pair_gt]
+            (dset.attr2idx[attr], dset.obj2idx[obj]) for attr, obj in test_pair_gt
+        ]
         self.test_pair_dict = dict.fromkeys(self.test_pair_dict, 0)
 
         # dict values are pair val, score, total
@@ -99,14 +97,16 @@ class Evaluator:
         self.score_model = self.score_manifold_model
 
     # Generate mask for each settings, mask scores, and get prediction labels
-    def generate_predictions(self, scores, obj_truth, bias=0.0, topk=1):  # (Batch, #pairs)
-        '''
+    def generate_predictions(
+        self, scores, obj_truth, bias=0.0, topk=1
+    ):  # (Batch, #pairs)
+        """
         Inputs
             scores: Output scores
             obj_truth: Ground truth object
         Returns
             results: dict of results in 3 settings
-        '''
+        """
 
         def get_pred_from_scores(_scores, topk):
             """
@@ -114,7 +114,8 @@ class Evaluator:
             Check later
             """
             _, pair_pred = _scores.topk(
-                topk, dim=1)  # sort returns indices of k largest values
+                topk, dim=1
+            )  # sort returns indices of k largest values
             pair_pred = pair_pred.contiguous().view(-1)
             attr_pred, obj_pred = self.pairs[pair_pred][:, 0].view(
                 -1, topk
@@ -132,9 +133,7 @@ class Evaluator:
 
         # Open world setting --no mask, all pairs of the dataset
         results.update({"open": get_pred_from_scores(scores, topk)})
-        results.update(
-            {"unbiased_open": get_pred_from_scores(orig_scores, topk)}
-        )
+        results.update({"unbiased_open": get_pred_from_scores(orig_scores, topk)})
         # Closed world setting - set the score for all Non test pairs to -1e10,
         # this excludes the pairs from set not in evaluation
         mask = self.closed_mask.repeat(scores.shape[0], 1)
@@ -150,33 +149,36 @@ class Evaluator:
         return results
 
     def score_clf_model(self, scores, obj_truth, topk=1):
-        '''
+        """
         Wrapper function to call generate_predictions for CLF models
-        '''
+        """
         attr_pred, obj_pred = scores
 
         # Go to CPU
-        attr_pred, obj_pred, obj_truth = attr_pred.to(
-            'cpu'), obj_pred.to('cpu'), obj_truth.to('cpu')
+        attr_pred, obj_pred, obj_truth = (
+            attr_pred.to("cpu"),
+            obj_pred.to("cpu"),
+            obj_truth.to("cpu"),
+        )
 
         # Gather scores (P(a), P(o)) for all relevant (a,o) pairs
         # Multiply P(a) * P(o) to get P(pair)
         # Return only attributes that are in our pairs
         attr_subset = attr_pred.index_select(1, self.pairs[:, 0])
         obj_subset = obj_pred.index_select(1, self.pairs[:, 1])
-        scores = (attr_subset * obj_subset)  # (Batch, #pairs)
+        scores = attr_subset * obj_subset  # (Batch, #pairs)
 
         results = self.generate_predictions(scores, obj_truth)
-        results['biased_scores'] = scores
+        results["biased_scores"] = scores
 
         return results
 
     def score_manifold_model(self, scores, obj_truth, bias=0.0, topk=1):
-        '''
+        """
         Wrapper function to call generate_predictions for manifold models
-        '''
+        """
         # Go to CPU
-        scores = {k: v.to('cpu') for k, v in scores.items()}
+        scores = {k: v.to("cpu") for k, v in scores.items()}
         obj_truth = obj_truth.to(device)
 
         # Gather scores for all relevant (a,o) pairs
@@ -185,13 +187,13 @@ class Evaluator:
         )  # (Batch, #pairs)
         orig_scores = scores.clone()
         results = self.generate_predictions(scores, obj_truth, bias, topk)
-        results['scores'] = orig_scores
+        results["scores"] = orig_scores
         return results
 
     def score_fast_model(self, scores, obj_truth, bias=0.0, topk=1):
-        '''
+        """
         Wrapper function to call generate_predictions for manifold models
-        '''
+        """
 
         results = {}
         # Repeat mask along pairs dimension
@@ -207,20 +209,16 @@ class Evaluator:
         # _, pair_pred = scores.topk(topk, dim=1)  # sort returns indices of k
         # largest values
         pair_pred = pair_pred.contiguous().view(-1)
-        attr_pred, obj_pred = self.pairs[pair_pred][:, 0].view(-1, topk), \
-            self.pairs[pair_pred][:, 1].view(-1, topk)
+        attr_pred, obj_pred = self.pairs[pair_pred][:, 0].view(-1, topk), self.pairs[
+            pair_pred
+        ][:, 1].view(-1, topk)
 
-        results.update({'closed': (attr_pred, obj_pred)})
+        results.update({"closed": (attr_pred, obj_pred)})
         return results
 
     def evaluate_predictions(
-            self,
-            predictions,
-            attr_truth,
-            obj_truth,
-            pair_truth,
-            allpred,
-            topk=1):
+        self, predictions, attr_truth, obj_truth, pair_truth, allpred, topk=1
+    ):
         # Go to CPU
         attr_truth, obj_truth, pair_truth = (
             attr_truth.to("cpu"),
@@ -237,19 +235,13 @@ class Evaluator:
             else:
                 unseen_ind.append(i)
 
-        seen_ind, unseen_ind = torch.LongTensor(seen_ind), torch.LongTensor(
-            unseen_ind
-        )
+        seen_ind, unseen_ind = torch.LongTensor(seen_ind), torch.LongTensor(unseen_ind)
 
         def _process(_scores):
             # Top k pair accuracy
             # Attribute, object and pair
-            attr_match = (
-                attr_truth.unsqueeze(1).repeat(1, topk) == _scores[0][:, :topk]
-            )
-            obj_match = (
-                obj_truth.unsqueeze(1).repeat(1, topk) == _scores[1][:, :topk]
-            )
+            attr_match = attr_truth.unsqueeze(1).repeat(1, topk) == _scores[0][:, :topk]
+            obj_match = obj_truth.unsqueeze(1).repeat(1, topk) == _scores[1][:, :topk]
 
             # Match of object pair
             match = (attr_match * obj_match).any(1).float()
@@ -262,8 +254,16 @@ class Evaluator:
 
             seen_score, unseen_score = torch.ones(512, 5), torch.ones(512, 5)
 
-            return attr_match, obj_match, match, seen_match, unseen_match, torch.Tensor(
-                seen_score + unseen_score), torch.Tensor(seen_score), torch.Tensor(unseen_score)
+            return (
+                attr_match,
+                obj_match,
+                match,
+                seen_match,
+                unseen_match,
+                torch.Tensor(seen_score + unseen_score),
+                torch.Tensor(seen_score),
+                torch.Tensor(unseen_score),
+            )
 
         def _add_to_dict(_scores, type_name, stats):
             base = [
@@ -290,13 +290,12 @@ class Evaluator:
         # Calculating AUC
         scores = predictions["scores"]
         # getting score for each ground truth class
-        correct_scores = scores[torch.arange(scores.shape[0]), pair_truth][
-            unseen_ind
-        ]
+        correct_scores = scores[torch.arange(scores.shape[0]), pair_truth][unseen_ind]
 
         # Getting top predicted score for these unseen classes
-        max_seen_scores = predictions['scores'][unseen_ind][:, self.seen_mask].topk(topk, dim=1)[
-            0][:, topk - 1]
+        max_seen_scores = predictions["scores"][unseen_ind][:, self.seen_mask].topk(
+            topk, dim=1
+        )[0][:, topk - 1]
 
         # Getting difference between these scores
         unseen_score_diff = max_seen_scores - correct_scores
@@ -328,9 +327,8 @@ class Evaluator:
 
         for bias in biaslist:
             scores = base_scores.clone()
-            results = self.score_fast_model(
-                scores, obj_truth, bias=bias, topk=topk)
-            results = results['closed']  # we only need biased
+            results = self.score_fast_model(scores, obj_truth, bias=bias, topk=topk)
+            results = results["closed"]  # we only need biased
             results = _process(results)
             seen_match = float(results[3].mean())
             unseen_match = float(results[4].mean())
@@ -383,12 +381,11 @@ def compute_representations(model, test_dataset, config, device):
     """
     obj2idx = test_dataset.obj2idx
     attr2idx = test_dataset.attr2idx
-    pairs = torch.tensor([(attr2idx[attr], obj2idx[obj])
-                         for attr, obj in test_dataset.pairs]).to(device)
+    pairs = torch.tensor(
+        [(attr2idx[attr], obj2idx[obj]) for attr, obj in test_dataset.pairs]
+    ).to(device)
 
-    test_pairs = np.array_split(
-        pairs, len(pairs) // config.text_encoder_batch_size
-    )
+    test_pairs = np.array_split(pairs, len(pairs) // config.text_encoder_batch_size)
 
     rep = torch.Tensor().to(device).type(model.dtype)
     with torch.no_grad():
@@ -401,9 +398,7 @@ def compute_representations(model, test_dataset, config, device):
                 enable_pos_emb=model.enable_pos_emb,
             )
 
-            text_features = text_features / text_features.norm(
-                dim=-1, keepdim=True
-            )
+            text_features = text_features / text_features.norm(dim=-1, keepdim=True)
 
             rep = torch.cat([rep, text_features], dim=0)
 
@@ -424,26 +419,22 @@ def clip_baseline(model, test_dataset, config, device):
             representations with clip model.
     """
     pairs = test_dataset.pairs
-    pairs = [(attr.replace(".", " ").lower(),
-              obj.replace(".", " ").lower())
-             for attr, obj in pairs]
+    pairs = [
+        (attr.replace(".", " ").lower(), obj.replace(".", " ").lower())
+        for attr, obj in pairs
+    ]
 
     prompts = [f"a photo of {attr} {obj}" for attr, obj in pairs]
-    tokenized_prompts = clip.tokenize(
-        prompts, context_length=config.context_length)
+    tokenized_prompts = clip.tokenize(prompts, context_length=config.context_length)
     test_batch_tokens = np.array_split(
-        tokenized_prompts,
-        len(tokenized_prompts) //
-        config.text_encoder_batch_size)
+        tokenized_prompts, len(tokenized_prompts) // config.text_encoder_batch_size
+    )
     rep = torch.Tensor().to(device).type(model.dtype)
     with torch.no_grad():
         for batch_tokens in test_batch_tokens:
             batch_tokens = batch_tokens.to(device)
-            _text_features = model.text_encoder(
-                batch_tokens, enable_pos_emb=True)
-            text_features = _text_features / _text_features.norm(
-                dim=-1, keepdim=True
-            )
+            _text_features = model.text_encoder(batch_tokens, enable_pos_emb=True)
+            text_features = _text_features / _text_features.norm(dim=-1, keepdim=True)
             rep = torch.cat((rep, text_features), dim=0)
 
     return rep
@@ -472,10 +463,7 @@ def predict_logits(model, text_rep, dataset, device, config):
         [],
         [],
     )
-    dataloader = DataLoader(
-        dataset,
-        batch_size=config.eval_batch_size,
-        shuffle=False)
+    dataloader = DataLoader(dataset, batch_size=config.eval_batch_size, shuffle=False)
     all_logits = torch.Tensor()
     with torch.no_grad():
         for idx, data in tqdm(
@@ -483,15 +471,9 @@ def predict_logits(model, text_rep, dataset, device, config):
         ):
             batch_img = data[0].to(device)
             batch_img_feat = model.encode_image(batch_img)
-            normalized_img = batch_img_feat / batch_img_feat.norm(
-                dim=-1, keepdim=True
-            )
+            normalized_img = batch_img_feat / batch_img_feat.norm(dim=-1, keepdim=True)
 
-            logits = (
-                model.clip_model.logit_scale.exp()
-                * normalized_img
-                @ text_rep.t()
-            )
+            logits = model.clip_model.logit_scale.exp() * normalized_img @ text_rep.t()
 
             attr_truth, obj_truth, pair_truth = data[1], data[2], data[3]
             logits = logits.cpu()
@@ -510,11 +492,7 @@ def predict_logits(model, text_rep, dataset, device, config):
     return all_logits, all_attr_gt, all_obj_gt, all_pair_gt
 
 
-def threshold_with_feasibility(
-        logits,
-        seen_mask,
-        threshold=None,
-        feasiblity=None):
+def threshold_with_feasibility(logits, seen_mask, threshold=None, feasiblity=None):
     """Function to remove infeasible compositions.
 
     Args:
@@ -540,13 +518,8 @@ def threshold_with_feasibility(
 
 
 def test(
-        test_dataset,
-        evaluator,
-        all_logits,
-        all_attr_gt,
-        all_obj_gt,
-        all_pair_gt,
-        config):
+    test_dataset, evaluator, all_logits, all_attr_gt, all_obj_gt, all_pair_gt, config
+):
     """Function computes accuracy on the validation and
     test dataset.
 
@@ -566,8 +539,7 @@ def test(
         dict: the result with all the metrics
     """
     predictions = {
-        pair_name: all_logits[:, i]
-        for i, pair_name in enumerate(test_dataset.pairs)
+        pair_name: all_logits[:, i] for i, pair_name in enumerate(test_dataset.pairs)
     }
     all_pred = [predictions]
 
@@ -581,10 +553,12 @@ def test(
         all_pred_dict, all_obj_gt, bias=config.bias, topk=config.topk
     )
 
-    attr_acc = float(torch.mean(
-        (results['unbiased_closed'][0].squeeze(-1) == all_attr_gt).float()))
-    obj_acc = float(torch.mean(
-        (results['unbiased_closed'][1].squeeze(-1) == all_obj_gt).float()))
+    attr_acc = float(
+        torch.mean((results["unbiased_closed"][0].squeeze(-1) == all_attr_gt).float())
+    )
+    obj_acc = float(
+        torch.mean((results["unbiased_closed"][1].squeeze(-1) == all_obj_gt).float())
+    )
 
     stats = evaluator.evaluate_predictions(
         results,
@@ -595,8 +569,8 @@ def test(
         topk=config.topk,
     )
 
-    stats['attr_acc'] = attr_acc
-    stats['obj_acc'] = obj_acc
+    stats["attr_acc"] = attr_acc
+    stats["obj_acc"] = obj_acc
 
     return stats
 
@@ -604,9 +578,7 @@ def test(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", help="name of the dataset", type=str)
-    parser.add_argument(
-        "--lr", help="learning rate", type=float, default=1e-04
-    )
+    parser.add_argument("--lr", help="learning rate", type=float, default=1e-04)
     parser.add_argument(
         "--weight_decay", help="weight decay", type=float, default=1e-05
     )
@@ -679,16 +651,12 @@ if __name__ == "__main__":
         default=16,
         type=int,
     )
+    parser.add_argument("--threshold", type=float, help="optional threshold")
     parser.add_argument(
-        '--threshold',
-        type=float,
-        help="optional threshold"
-    )
-    parser.add_argument(
-        '--threshold_trials',
+        "--threshold_trials",
         type=int,
         default=50,
-        help="how many threshold values to try"
+        help="how many threshold values to try",
     )
 
     config = parser.parse_args()
@@ -700,101 +668,112 @@ if __name__ == "__main__":
     print(f"dataset: {config.dataset}")
     print(f"experiment name: {config.experiment_name}")
 
-    if config.experiment_name != 'clip':
-        if not os.path.exists(config.soft_embeddings) and \
-            not os.path.exists(config.adapter_path):
-            print(f'{config.soft_embeddings} not found')
-            print('code exiting!')
+    if config.experiment_name != "clip":
+        if not os.path.exists(config.soft_embeddings) and not os.path.exists(
+            config.adapter_path
+        ):
+            print(f"{config.soft_embeddings} not found")
+            print("code exiting!")
             exit(0)
 
     dataset_path = DATASET_PATHS[config.dataset]
 
-    print('loading validation dataset')
-    val_dataset = CompositionDataset(dataset_path,
-                                     phase='val',
-                                     split='compositional-split-natural',
-                                     open_world=config.open_world)
+    print("loading validation dataset")
+    val_dataset = CompositionDataset(
+        dataset_path,
+        phase="val",
+        split="compositional-split-natural",
+        open_world=config.open_world,
+    )
 
-    print('loading test dataset')
-    test_dataset = CompositionDataset(dataset_path,
-                                      phase='test',
-                                      split='compositional-split-natural',
-                                      open_world=config.open_world)
+    print("loading test dataset")
+    test_dataset = CompositionDataset(
+        dataset_path,
+        phase="test",
+        split="compositional-split-natural",
+        open_world=config.open_world,
+    )
     # get the model and the text rep
-    if config.experiment_name == 'clip':
+    if config.experiment_name == "clip":
         clip_model, preprocess = load(
-            config.clip_model, device=device, context_length=config.context_length)
+            config.clip_model, device=device, context_length=config.context_length
+        )
 
         model = CLIPInterface(
-            clip_model,
-            config,
-            token_ids=None,
-            device=device,
-            enable_pos_emb=True)
+            clip_model, config, token_ids=None, device=device, enable_pos_emb=True
+        )
+        val_text_rep = clip_baseline(model, val_dataset, config, device)
+        test_text_rep = clip_baseline(model, test_dataset, config, device)
+    elif config.experiment_name == "visual_prompt":
+        model, optimizer = get_model(val_dataset, config, device)
+        # load the vocab
+        weights = torch.load(config.visual_prompt_path)
+        model.custom_visual.visual_prompt.copy_(weights["visual_prompt"])
         val_text_rep = clip_baseline(model, val_dataset, config, device)
         test_text_rep = clip_baseline(model, test_dataset, config, device)
 
-    elif config.experiment_name == 'clip_adapter' or \
-        config.experiment_name == 'clip_adapter_csp':
+    elif (
+        config.experiment_name == "clip_adapter"
+        or config.experiment_name == "clip_adapter_csp"
+    ):
         model, optimizer = get_model(val_dataset, config, device)
 
-        model.adapter.load_state_dict(
-            torch.load(config.adapter_path)
-        )
-        if config.experiment_name == 'clip_adapter_csp':
-            soft_embs = torch.load(config.soft_embeddings)['soft_embeddings']
+        model.adapter.load_state_dict(torch.load(config.adapter_path))
+        if config.experiment_name == "clip_adapter_csp":
+            soft_embs = torch.load(config.soft_embeddings)["soft_embeddings"]
             model.set_soft_embeddings(soft_embs)
-        val_text_rep = compute_representations(
-            model, val_dataset, config, device)
-        test_text_rep = compute_representations(
-            model, test_dataset, config, device)
+        val_text_rep = compute_representations(model, val_dataset, config, device)
+        test_text_rep = compute_representations(model, test_dataset, config, device)
     elif config.experiment_name == "csp_att" or config.experiment_name == "csp_obj":
         # changing the name of experiment
         exp_name = copy.deepcopy(config.experiment_name)
         print("changing the name of the experiment to csp")
         config.experiment_name = "csp"
         model, optimizer = get_model(val_dataset, config, device)
-        soft_embs = torch.load(config.soft_embeddings)['soft_embeddings']
-        subset_soft_embs = torch.load(config.subset_embeddings)["subset_soft_embeddings"]
+        soft_embs = torch.load(config.soft_embeddings)["soft_embeddings"]
+        subset_soft_embs = torch.load(config.subset_embeddings)[
+            "subset_soft_embeddings"
+        ]
         with torch.no_grad():
             if exp_name == "csp_att":
-                soft_embs[:model.offset, :] = subset_soft_embs
+                soft_embs[: model.offset, :] = subset_soft_embs
             else:
-                soft_embs[model.offset:, :] = subset_soft_embs
+                soft_embs[model.offset :, :] = subset_soft_embs
         model.set_soft_embeddings(soft_embs)
     else:
         model, optimizer = get_model(val_dataset, config, device)
-        soft_embs = torch.load(config.soft_embeddings)['soft_embeddings']
+        soft_embs = torch.load(config.soft_embeddings)["soft_embeddings"]
         model.set_soft_embeddings(soft_embs)
-        val_text_rep = compute_representations(
-            model, val_dataset, config, device)
-        test_text_rep = compute_representations(
-            model, test_dataset, config, device)
+        val_text_rep = compute_representations(model, val_dataset, config, device)
+        test_text_rep = compute_representations(model, test_dataset, config, device)
 
-    print('evaluating on the validation set')
+    print("evaluating on the validation set")
     if config.open_world and config.threshold is None:
         evaluator = Evaluator(val_dataset, model=None)
         feasibility_path = os.path.join(
-            DIR_PATH, f'data/feasibility_{config.dataset}.pt')
-        unseen_scores = torch.load(
-            feasibility_path,
-            map_location='cpu')['feasibility']
-        seen_mask = val_dataset.seen_mask.to('cpu')
-        min_feasibility = (unseen_scores + seen_mask * 10.).min()
-        max_feasibility = (unseen_scores - seen_mask * 10.).max()
+            DIR_PATH, f"data/feasibility_{config.dataset}.pt"
+        )
+        unseen_scores = torch.load(feasibility_path, map_location="cpu")["feasibility"]
+        seen_mask = val_dataset.seen_mask.to("cpu")
+        min_feasibility = (unseen_scores + seen_mask * 10.0).min()
+        max_feasibility = (unseen_scores - seen_mask * 10.0).max()
         thresholds = np.linspace(
-            min_feasibility,
-            max_feasibility,
-            num=config.threshold_trials)
-        best_auc = 0.
+            min_feasibility, max_feasibility, num=config.threshold_trials
+        )
+        best_auc = 0.0
         best_th = -10
         val_stats = None
         with torch.no_grad():
             all_logits, all_attr_gt, all_obj_gt, all_pair_gt = predict_logits(
-                model, val_text_rep, val_dataset, device, config)
+                model, val_text_rep, val_dataset, device, config
+            )
             for th in thresholds:
                 temp_logits = threshold_with_feasibility(
-                    all_logits, val_dataset.seen_mask, threshold=th, feasiblity=unseen_scores)
+                    all_logits,
+                    val_dataset.seen_mask,
+                    threshold=th,
+                    feasiblity=unseen_scores,
+                )
                 results = test(
                     val_dataset,
                     evaluator,
@@ -802,30 +781,34 @@ if __name__ == "__main__":
                     all_attr_gt,
                     all_obj_gt,
                     all_pair_gt,
-                    config
+                    config,
                 )
-                auc = results['AUC']
+                auc = results["AUC"]
                 if auc > best_auc:
                     best_auc = auc
                     best_th = th
-                    print('New best AUC', best_auc)
-                    print('Threshold', best_th)
+                    print("New best AUC", best_auc)
+                    print("Threshold", best_th)
                     val_stats = copy.deepcopy(results)
     else:
         best_th = config.threshold
         evaluator = Evaluator(val_dataset, model=None)
         feasibility_path = os.path.join(
-            DIR_PATH, f'data/feasibility_{config.dataset}.pt')
-        unseen_scores = torch.load(
-            feasibility_path,
-            map_location='cpu')['feasibility']
+            DIR_PATH, f"data/feasibility_{config.dataset}.pt"
+        )
+        unseen_scores = torch.load(feasibility_path, map_location="cpu")["feasibility"]
         with torch.no_grad():
             all_logits, all_attr_gt, all_obj_gt, all_pair_gt = predict_logits(
-                model, val_text_rep, val_dataset, device, config)
+                model, val_text_rep, val_dataset, device, config
+            )
             if config.open_world:
-                print('using threshold: ', best_th)
+                print("using threshold: ", best_th)
                 all_logits = threshold_with_feasibility(
-                    all_logits, val_dataset.seen_mask, threshold=best_th, feasiblity=unseen_scores)
+                    all_logits,
+                    val_dataset.seen_mask,
+                    threshold=best_th,
+                    feasiblity=unseen_scores,
+                )
             results = test(
                 val_dataset,
                 evaluator,
@@ -833,7 +816,7 @@ if __name__ == "__main__":
                 all_attr_gt,
                 all_obj_gt,
                 all_pair_gt,
-                config
+                config,
             )
         val_stats = copy.deepcopy(results)
         result = ""
@@ -841,18 +824,20 @@ if __name__ == "__main__":
             result = result + key + "  " + str(round(val_stats[key], 4)) + "| "
         print(result)
 
-    print('evaluating on the test set')
+    print("evaluating on the test set")
     with torch.no_grad():
         evaluator = Evaluator(test_dataset, model=None)
         all_logits, all_attr_gt, all_obj_gt, all_pair_gt = predict_logits(
-            model, test_text_rep, test_dataset, device, config)
+            model, test_text_rep, test_dataset, device, config
+        )
         if config.open_world and best_th is not None:
-            print('using threshold: ', best_th)
+            print("using threshold: ", best_th)
             all_logits = threshold_with_feasibility(
                 all_logits,
                 test_dataset.seen_mask,
                 threshold=best_th,
-                feasiblity=unseen_scores)
+                feasiblity=unseen_scores,
+            )
         test_stats = test(
             test_dataset,
             evaluator,
@@ -860,30 +845,29 @@ if __name__ == "__main__":
             all_attr_gt,
             all_obj_gt,
             all_pair_gt,
-            config
+            config,
         )
 
         result = ""
         for key in test_stats:
-            result = result + key + "  " + \
-                str(round(test_stats[key], 4)) + "| "
+            result = result + key + "  " + str(round(test_stats[key], 4)) + "| "
         print(result)
 
     results = {
-        'val': val_stats,
-        'test': test_stats,
+        "val": val_stats,
+        "test": test_stats,
     }
 
     if best_th is not None:
-        results['best_threshold'] = best_th
+        results["best_threshold"] = best_th
 
-    if config.experiment_name != 'clip':
+    if config.experiment_name != "clip":
         if config.open_world:
             result_path = config.soft_embeddings[:-2] + "open.calibrated.json"
         else:
             result_path = config.soft_embeddings[:-2] + "closed.json"
 
-        with open(result_path, 'w+') as fp:
+        with open(result_path, "w+") as fp:
             json.dump(results, fp)
 
     print("done!")

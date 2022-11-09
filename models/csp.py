@@ -62,18 +62,12 @@ class CSPInterface(CLIPInterface):
             token_tensor[:, eos_idx - 2, :] = self.attr_dropout(subset_soft_embeddings[
                 attr_idx
             ]).type(self.clip_model.dtype)
-            token_tensor[:, eos_idx - 1, :] = soft_embeddings[
-                obj_idx + self.offset
-            ].type(self.clip_model.dtype)
 
         elif self.config.experiment_name == "csp_obj":
             soft_embeddings = self.attr_dropout(self.soft_embeddings)
             soft_embeddings = soft_embeddings.to(self.device)
             subset_soft_embeddings = self.subset_soft_embeddings.to(self.device)
 
-            token_tensor[:, eos_idx - 2, :] = soft_embeddings[
-                attr_idx
-            ].type(self.clip_model.dtype)
             token_tensor[:, eos_idx - 1, :] = self.attr_dropout(subset_soft_embeddings[
                 obj_idx
             ]).type(self.clip_model.dtype)
@@ -141,15 +135,21 @@ def csp_init(
         offset
     )
 
-
 def get_csp(train_dataset, config, device):
+
+    if config.experiment == "csp_att":
+        prompt_template = "a photo of X object"
+    elif config.experiment == "csp_obj":
+        prompt_template = "a photo of X"
+    else:
+        prompt_template = "a photo of X X"
 
     (
         clip_model,
         soft_embedding,
         class_token_ids,
         offset
-    ) = csp_init(train_dataset, config, device)
+    ) = csp_init(train_dataset, config, device, prompt_template=prompt_template)
 
     with torch.no_grad():
         subset_soft_embeddings = None

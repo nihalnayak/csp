@@ -744,7 +744,7 @@ if __name__ == "__main__":
         config.experiment_name = "csp"
         model, optimizer = get_model(val_dataset, config, device)
         soft_embs = torch.load(config.soft_embeddings)["soft_embeddings"]
-        subset_soft_embs = torch.load(config.subset_embeddings)[
+        subset_soft_embs = torch.load(config.subset_soft_embeddings)[
             "subset_soft_embeddings"
         ]
         with torch.no_grad():

@@ -753,6 +753,8 @@ if __name__ == "__main__":
             else:
                 soft_embs[model.offset :, :] = subset_soft_embs
         model.set_soft_embeddings(soft_embs)
+        val_text_rep = compute_representations(model, val_dataset, config, device)
+        test_text_rep = compute_representations(model, test_dataset, config, device)
     else:
         model, optimizer = get_model(val_dataset, config, device)
         soft_embs = torch.load(config.soft_embeddings)["soft_embeddings"]

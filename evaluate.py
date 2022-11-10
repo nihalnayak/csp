@@ -433,7 +433,11 @@ def clip_baseline(model, test_dataset, config, device):
     with torch.no_grad():
         for batch_tokens in test_batch_tokens:
             batch_tokens = batch_tokens.to(device)
-            _text_features = model.text_encoder(batch_tokens, enable_pos_emb=True)
+            if config.experiment_name == "visual_prompt":
+                _text_features = model.encode_text(batch_tokens)
+            else:
+                _text_features = model.text_encoder(batch_tokens, enable_pos_emb=True)
+
             text_features = _text_features / _text_features.norm(dim=-1, keepdim=True)
             rep = torch.cat((rep, text_features), dim=0)
 

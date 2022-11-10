@@ -47,6 +47,14 @@ def train_model(model, optimizer, train_dataset, config, device):
         [(attr2idx[attr], obj2idx[obj]) for attr, obj in train_dataset.train_pairs]
     ).to(device)
 
+    if config.experiment_name == "csp_att":
+        train_pairs = torch.tensor(
+            [(attr2idx[attr], 0) for attr in train_dataset.attrs]
+        ).to(device)
+
+    if config.experiment_name == "csp_obj":
+        train_pairs = torch.tensor([(0, obj2idx[obj]) for obj in train_dataset.objs])
+
     text_prompts = clip.tokenize(
         [
             f"a photo of {attr.replace('.',' ').lower()} {obj.replace('.', ' ')}"
@@ -66,7 +74,13 @@ def train_model(model, optimizer, train_dataset, config, device):
 
         epoch_train_losses = []
         for bid, batch in enumerate(train_dataloader):
-            batch_img, batch_target = batch[0], batch[3]
+            if config.experiment_name == "csp_att":
+                batch_img, batch_target = batch[0], batch[1]
+            elif config.experiment_name == "csp_obj":
+                batch_img, batch_target = batch[0], batch[2]
+            else:
+                batch_img, batch_target = batch[0], batch[3]
+
             batch_target = batch_target.to(device)
             batch_img = batch_img.to(device)
 

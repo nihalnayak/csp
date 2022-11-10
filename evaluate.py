@@ -716,7 +716,8 @@ if __name__ == "__main__":
         model, optimizer = get_model(val_dataset, config, device)
         # load the vocab
         weights = torch.load(config.visual_prompt_path)
-        model.custom_visual.visual_prompt.copy_(weights["visual_prompt"])
+        with torch.no_grad():
+            model.custom_visual.visual_prompt.copy_(weights["visual_prompt"])
         val_text_rep = clip_baseline(model, val_dataset, config, device)
         test_text_rep = clip_baseline(model, test_dataset, config, device)
 

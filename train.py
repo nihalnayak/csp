@@ -137,7 +137,10 @@ def save_soft_embeddings(model, config, epoch=None):
 
     # save the soft embedding
     with torch.no_grad():
-        if config.experiment_name == "visual_prompt":
+        if (
+            config.experiment_name == "visual_prompt"
+            or config.experiment_name == "visual_prompt_normal"
+        ):
             if epoch:
                 visual_prompt_path = os.path.join(
                     config.save_path, f"visual_prompt_epoch_{epoch}.pt"

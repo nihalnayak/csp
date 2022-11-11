@@ -57,7 +57,7 @@ def train_model(model, optimizer, train_dataset, config, device):
 
     text_prompts = clip.tokenize(
         [
-            f"a photo of {attr.replace('.',' ').lower()} {obj.replace('.', ' ')}"
+            f"a photo of {attr.replace('.',' ').lower()} {obj.replace('.', ' ').lower()}"
             for attr, obj in train_dataset.train_pairs
         ],
         context_length=config.context_length,

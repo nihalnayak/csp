@@ -7,7 +7,7 @@ import torch.nn as nn
 
 
 class CustomVisualEncoder(nn.Module):
-    def __init__(self, clip_visual, num_prompt_tokens) -> None:
+    def __init__(self, clip_visual, num_prompt_tokens, experiment_name=None) -> None:
         super().__init__()
 
         self.input_resolution = clip_visual.input_resolution
@@ -26,11 +26,16 @@ class CustomVisualEncoder(nn.Module):
         width = self.positional_embedding.size(1)
         self.visual_prompt = nn.Parameter(torch.zeros(1, self.num_prompt_tokens, width))
 
-        patch_size = self.conv1.weight.shape[-1]
-        val = math.sqrt(6.0 / float(3 * reduce(mul, [patch_size], 1) + width))  # noqa
-        # xavier_uniform initialization
-        print(-val, val)
-        nn.init.uniform_(self.visual_prompt.data, -val, val)
+        if experiment_name == "visual_prompt_normal":
+            nn.init.normal_(self.visual_prompt.data, std=0.01)
+        else:
+            patch_size = self.conv1.weight.shape[-1]
+            val = math.sqrt(
+                6.0 / float(3 * reduce(mul, [patch_size], 1) + width)
+            )  # noqa
+            # xavier_uniform initialization
+            print(-val, val)
+            nn.init.uniform_(self.visual_prompt.data, -val, val)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         batch_size = x.size(0)

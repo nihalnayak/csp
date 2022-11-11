@@ -28,7 +28,10 @@ def get_model(train_dataset, config, device):
     # special experimental setup
     elif config.experiment_name == "mix_csp":
         return get_mix_csp(train_dataset, config, device)
-    elif config.experiment_name == "visual_prompt":
+    elif (
+        config.experiment_name == "visual_prompt"
+        or config.experiment_name == "visual_prompt_normal"
+    ):
         return get_visual_prompts(config, device)
     else:
         raise NotImplementedError(

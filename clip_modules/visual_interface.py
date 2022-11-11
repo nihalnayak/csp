@@ -49,7 +49,7 @@ class CLIPVisualInterface(torch.nn.Module):
         self.device = device
 
         self.custom_visual = CustomVisualEncoder(
-            clip_model.visual, config.num_prompt_tokens
+            clip_model.visual, config.num_prompt_tokens, config.experiment_name
         )
 
     def encode_image(self, image):

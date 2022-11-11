@@ -84,7 +84,10 @@ def train_model(model, optimizer, train_dataset, config, device):
             batch_target = batch_target.to(device)
             batch_img = batch_img.to(device)
 
-            if config.experiment_name == "visual_prompt":
+            if (
+                config.experiment_name == "visual_prompt"
+                or config.experiment_name == "visual_prompt_normal"
+            ):
                 logits = model(batch_img, text_prompts)
             else:
                 batch_feat = model.encode_image(batch_img)

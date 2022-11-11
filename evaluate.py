@@ -433,7 +433,10 @@ def clip_baseline(model, test_dataset, config, device):
     with torch.no_grad():
         for batch_tokens in test_batch_tokens:
             batch_tokens = batch_tokens.to(device)
-            if config.experiment_name == "visual_prompt":
+            if (
+                config.experiment_name == "visual_prompt"
+                or config.experiment_name == "visual_prompt_normal"
+            ):
                 _text_features = model.encode_text(batch_tokens)
             else:
                 _text_features = model.text_encoder(batch_tokens, enable_pos_emb=True)
@@ -680,7 +683,11 @@ if __name__ == "__main__":
     print(f"dataset: {config.dataset}")
     print(f"experiment name: {config.experiment_name}")
 
-    if config.experiment_name != "clip" and config.experiment_name != "visual_prompt":
+    if (
+        config.experiment_name != "clip"
+        and config.experiment_name != "visual_prompt"
+        and config.experiment_name != "visual_prompt_normal"
+    ):
         if not os.path.exists(config.soft_embeddings) and not os.path.exists(
             config.adapter_path
         ):
@@ -716,7 +723,10 @@ if __name__ == "__main__":
         )
         val_text_rep = clip_baseline(model, val_dataset, config, device)
         test_text_rep = clip_baseline(model, test_dataset, config, device)
-    elif config.experiment_name == "visual_prompt":
+    elif (
+        config.experiment_name == "visual_prompt"
+        or config.experiment_name == "visual_prompt_normal"
+    ):
         model, optimizer = get_model(val_dataset, config, device)
         # load the vocab
         weights = torch.load(config.visual_prompt_path)
